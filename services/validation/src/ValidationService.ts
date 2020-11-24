@@ -1,6 +1,6 @@
 import bunyan from 'bunyan';
 import Web3 from 'web3';
-import { StringMap } from '@ethereum-sourcify/core';
+import { StringMap, assertObjectSize } from '@ethereum-sourcify/core';
 import AdmZip from 'adm-zip';
 import fs from 'fs';
 import Path from 'path';
@@ -202,6 +202,7 @@ export class ValidationService implements IValidationService {
      */
     private findMetadataFiles(files: PathContent[]): any[] {
         const metadataCollection = [];
+        const malformedMetadataFiles = [];
 
         for (const file of files) {
             let metadata = this.extractMetadataFromString(file.content);
@@ -213,12 +214,27 @@ export class ValidationService implements IValidationService {
             }
 
             if (metadata) {
-                metadataCollection.push(metadata);
+                try {
+                    assertObjectSize(metadata.settings.compilationTarget, 1);
+                    metadataCollection.push(metadata);
+                } catch (err) {
+                    malformedMetadataFiles.push(file.path);
+                }
             }
         }
 
-        if (!metadataCollection.length) {
-            const msg = "Metadata file not found. Did you include \"metadata.json\"?";
+        let msg = "";
+        if (malformedMetadataFiles.length) {
+            const responsibleFiles =
+                malformedMetadataFiles.every(Boolean) ?
+                malformedMetadataFiles.join(", ") : `${malformedMetadataFiles.length} metadata files`;
+            msg = `Malformed settings.compilationTarget in: ${responsibleFiles}`;
+
+        } else if (!metadataCollection.length) {
+            msg = "Metadata file not found. Did you include \"metadata.json\"?";
+        }
+
+        if (msg) {
             if (this.logger) this.logger.error(msg);
             throw new Error(msg);
         }

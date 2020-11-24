@@ -1,0 +1,1 @@
+Malformed settings.compilationTarget in: /home/fabijan/shardlabs/sourcify/services/validation/test/files/metadata-multiple-targets.json

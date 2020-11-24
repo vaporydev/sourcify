@@ -63,3 +63,35 @@ export function cborDecode(bytecode: number[]): any {
     const bytecodeBuffer = Buffer.from(bytecode.slice(bytecode.length - 2 - cborLength, -2));
     return cbor.decodeFirstSync(bytecodeBuffer);
 }
+
+/**
+ * Asserts that the number of keys of the provided object is expectedSize.
+ * If not, logs an appropriate message (if log function provided) and throws an Error.
+ * @param object the object to check
+ * @param objectName the name of the object to use in error messages
+ * @param expectedSize the size that the object should have
+ * @param log optional log function
+ */
+export function assertObjectSize(object: any, expectedSize: number, log?: Function, info?: any) {
+    let err = "";
+    
+    if (!object) {
+        err = `Cannot assert for ${object}.`;
+    } else {
+        const objectSize = Object.keys(object).length;   
+        if (objectSize !== expectedSize) {
+            err = `Error in size assertion! Actual size: ${objectSize}. Expected size: ${expectedSize}.`;
+        }
+    }
+
+    if (err) {
+        if (log) {
+            if (info) {
+                log(info, err);
+            } else {
+                log(err);
+            }
+        }
+        throw new Error(err);
+    }
+}

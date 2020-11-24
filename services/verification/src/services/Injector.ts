@@ -1,7 +1,7 @@
 import Web3 from 'web3';
 import path from 'path';
 import * as bunyan from 'bunyan';
-import { Match, InputData, getChainByName, getSupportedChains, Logger, FileService, StringMap, cborDecode } from '@ethereum-sourcify/core';
+import { Match, InputData, getChainByName, getSupportedChains, Logger, FileService, StringMap, cborDecode, assertObjectSize } from '@ethereum-sourcify/core';
 import { RecompilationResult, getBytecode, recompile, getBytecodeWithoutMetadata as trimMetadata, checkEndpoint } from '../utils';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const multihashes: any = require('multihashes');
@@ -211,6 +211,10 @@ export class Injector {
             // Starting from here, we cannot trust the metadata object anymore,
             // because it is modified inside recompile.
             const target = Object.assign({}, source.metadata.settings.compilationTarget);
+            assertObjectSize(target, 1, this.log.error, {
+                loc: "[INJECT]",
+                object: "settings.compilationTarget"
+            });
 
             let compilationResult: RecompilationResult;
             try {

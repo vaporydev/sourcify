@@ -1,6 +1,6 @@
 import Web3 from 'web3';
 import fetch from 'node-fetch';
-import { StringMap } from '@ethereum-sourcify/core';
+import { assertObjectSize, StringMap } from '@ethereum-sourcify/core';
 import Path from 'path';
 import fs from 'fs';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -157,6 +157,11 @@ function reformatMetadata(
     let contractName = '';
 
     input.settings = metadata.settings;
+
+    assertObjectSize(metadata.settings.compilationTarget, 1, log.error, {
+        loc: "[REFORMAT]",
+        object: "settings.compilationTarget"
+    });
 
     for (fileName in metadata.settings.compilationTarget) {
         contractName = metadata.settings.compilationTarget[fileName];
