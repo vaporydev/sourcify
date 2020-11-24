@@ -17,6 +17,20 @@ export declare interface StringMap {
   [key: string]: string;
 }
 
+export interface PathBuffer {
+  path?: string;
+  buffer: Buffer;
+}
+
+export interface PathContent {
+  path?: string;
+  content: string;
+}
+
+export interface SourceMap {
+  [compiledPath: string]: PathContent;
+}
+
 export interface Match {
   address: string | null,
   status: 'perfect' | 'partial' | null

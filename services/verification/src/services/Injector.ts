@@ -1,7 +1,7 @@
 import Web3 from 'web3';
 import path from 'path';
 import * as bunyan from 'bunyan';
-import { Match, InputData, getChainByName, getSupportedChains, Logger, FileService, StringMap, cborDecode, assertObjectSize } from '@ethereum-sourcify/core';
+import { Match, InputData, getChainByName, getSupportedChains, Logger, FileService, StringMap, cborDecode, assertObjectSize, CheckedContract } from '@ethereum-sourcify/core';
 import { RecompilationResult, getBytecode, recompile, getBytecodeWithoutMetadata as trimMetadata, checkEndpoint } from '../utils';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const multihashes: any = require('multihashes');

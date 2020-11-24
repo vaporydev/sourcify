@@ -1,5 +1,4 @@
-import { SourceMap } from './ValidationService';
-import { StringMap } from '@ethereum-sourcify/core';
+import { StringMap, SourceMap } from './types';
 
 const STANDARD_JSON_SETTINGS_KEYS = [
         "stopAfter", "remappings", "optimizer", "evmVersion", "debug", "metadata", "libraries", "outputSelection"
@@ -9,7 +8,7 @@ const STANDARD_JSON_SETTINGS_KEYS = [
  * Abstraction of a checked solidity contract. With metadata and source (solidity) files.
  * The info property contains the information about compilation or errors encountered while validating the metadata.
  */
-export default class CheckedContract {
+export class CheckedContract {
     /** Object containing contract metadata keys and values. */
     metadata: any;
 

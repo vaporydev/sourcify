@@ -1,39 +1,14 @@
 import bunyan from 'bunyan';
 import Web3 from 'web3';
-import { StringMap, assertObjectSize } from '@ethereum-sourcify/core';
+import { StringMap, assertObjectSize, SourceMap, PathBuffer, PathContent, CheckedContract } from '@ethereum-sourcify/core';
 import AdmZip from 'adm-zip';
 import fs from 'fs';
 import Path from 'path';
-import CheckedContract from './CheckedContract';
 
 /**
  * Regular expression matching metadata nested within another json.
  */
 const NESTED_METADATA_REGEX = /"{\\"compiler\\":{\\"version\\".*?},\\"version\\":1}"/;
-
-export class PathBuffer {
-    path?: string;
-    buffer: Buffer;
-
-    constructor(buffer: Buffer, path?: string) {
-        this.buffer = buffer;
-        this.path = path;
-    }
-}
-
-class PathContent {
-    path: string;
-    content: string;
-
-    constructor(content: string, path?: string) {
-        this.content = content;
-        this.path = path;
-    }
-}
-
-export interface SourceMap {
-    [compiledPath: string]: PathContent;
-}
 
 export interface IValidationService {
     /**
@@ -73,7 +48,7 @@ export class ValidationService implements IValidationService {
             if (fs.existsSync(path)) {
                 this.traversePathRecursively(path, filePath => {
                     const fullPath = Path.resolve(filePath);
-                    const file = new PathBuffer(fs.readFileSync(filePath), fullPath);
+                    const file = {buffer: fs.readFileSync(filePath), path: fullPath};
                     files.push(file);
                 });
             } else if (ignoring) {
@@ -86,8 +61,7 @@ export class ValidationService implements IValidationService {
 
     checkFiles(files: PathBuffer[]): CheckedContract[] {
         const inputFiles = this.findInputFiles(files);
-        // const sanitizedFiles = this.sanitizeInputFiles(inputFiles);
-        const parsedFiles = inputFiles.map(pathBuffer => new PathContent(pathBuffer.buffer.toString(), pathBuffer.path));
+        const parsedFiles = inputFiles.map(pathBuffer => ({ content: pathBuffer.buffer.toString(), path: pathBuffer.path }));
         const metadataFiles = this.findMetadataFiles(parsedFiles);
 
         const checkedContracts: CheckedContract[] = [];
@@ -155,44 +129,10 @@ export class ValidationService implements IValidationService {
         new AdmZip(zippedFile.buffer).extractAllTo(tmpDir);
 
         this.traversePathRecursively(tmpDir, filePath => {
-            const file = new PathBuffer(fs.readFileSync(filePath), zippedFile.path);
+            const file = {buffer: fs.readFileSync(filePath), content: zippedFile.path};
             files.push(file);
         });
         this.traversePathRecursively(tmpDir, fs.unlinkSync, fs.rmdirSync);
-    }
-
-    private sanitizeInputFiles(files: PathBuffer[]): PathContent[] {
-        const sanitizedFiles: PathContent[] = [];
-        if (!files.length) {
-            const msg = 'Unable to extract any files. Your request may be misformatted ' +
-                'or missing some content.';
-            if (this.logger) this.logger.error(msg);
-            throw new Error(msg);
-
-        }
-
-        for (const file of files) {
-            const content: string = file.buffer.toString();
-            /*try {
-                const val = JSON.parse(file.buffer.toString());
-                const type = Object.prototype.toString.call(val);
-
-                // JSON formatted metadata or Stringified metadata
-                if (type === '[object Object]') {
-                    content = JSON.stringify(val);
-                } else if (Array.isArray(val)) {
-                    content = JSON.stringify(val[0]);
-                } else {
-                    content = val;
-                }
-
-            } catch (err) {
-                content = file.buffer.toString();          // Solidity files
-            }*/
-
-            sanitizedFiles.push(new PathContent(content, file.path));
-        }
-        return sanitizedFiles;
     }
 
     /**
@@ -257,7 +197,7 @@ export class ValidationService implements IValidationService {
 
         for (const fileName in metadata.sources) {
             const sourceInfo = metadata.sources[fileName];
-            let file = new PathContent(undefined);
+            let file: PathContent = {content: undefined};
             file.content = sourceInfo.content;
             const hash: string = sourceInfo.keccak256;
             if (file.content) {
