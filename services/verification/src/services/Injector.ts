@@ -1,7 +1,7 @@
 import Web3 from 'web3';
 import path from 'path';
 import * as bunyan from 'bunyan';
-import { Match, InputData, getChainByName, getSupportedChains, Logger, FileService, StringMap, cborDecode, assertObjectSize, CheckedContract } from '@ethereum-sourcify/core';
+import { Match, InputData, getChainByName, getSupportedChains, Logger, FileService, StringMap, cborDecode, assertObjectSize } from '@ethereum-sourcify/core';
 import { RecompilationResult, getBytecode, recompile, getBytecodeWithoutMetadata as trimMetadata, checkEndpoint } from '../utils';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const multihashes: any = require('multihashes');
@@ -197,7 +197,7 @@ export class Injector {
     public async inject(
         inputData: InputData
     ): Promise<Match> {
-        const { chain, addresses, files } = inputData;
+        const { chain, addresses, contracts, shouldFetch } = inputData;
         this.validateAddresses(addresses);
         this.validateChain(chain);
 
@@ -206,19 +206,27 @@ export class Injector {
             status: null
         };
 
-        for (const source of files) {
+        for (const contract of contracts) {
 
             // Starting from here, we cannot trust the metadata object anymore,
             // because it is modified inside recompile.
-            const target = Object.assign({}, source.metadata.settings.compilationTarget);
+            const target = Object.assign({}, contract.metadata.settings.compilationTarget);
             assertObjectSize(target, 1, this.log.error, {
                 loc: "[INJECT]",
                 object: "settings.compilationTarget"
             });
 
+            if (shouldFetch && !contract.isValid()) {
+                try {
+                    await contract.fetchMissing(this.log);
+                } catch(err) {
+                    throw err;
+                }
+            }
+
             let compilationResult: RecompilationResult;
             try {
-                compilationResult = await recompile(source.metadata, source.solidity, this.log)
+                compilationResult = await recompile(contract.metadata, contract.solidity, this.log)
             } catch (err) {
                 this.log.info({ loc: `[RECOMPILE]`, err: err });
                 throw err;
@@ -254,11 +262,11 @@ export class Injector {
             // and the sources.
             if (match.address && match.status === 'perfect') {
 
-                this.storePerfectMatchData(this.repositoryPath, chain, match.address, compilationResult, source.solidity)
+                this.storePerfectMatchData(this.repositoryPath, chain, match.address, compilationResult, contract.solidity)
 
             } else if (match.address && match.status === 'partial') {
 
-                this.storePartialMatchData(this.repositoryPath, chain, match.address, compilationResult, source.solidity)
+                this.storePartialMatchData(this.repositoryPath, chain, match.address, compilationResult, contract.solidity)
 
             } else {
                 const err = new Error(

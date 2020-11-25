@@ -33,7 +33,8 @@ export default class VerificationController extends BaseController implements IC
 
         const inputData: InputData = {
             addresses: [req.body.address],
-            chain: chain
+            chain,
+            shouldFetch: req.body.shouldFetch || true // TODO add a shouldFetch checkbox or similar to ui
         }
         const result = await this.verificationService.findByAddress(req.body.address, inputData.chain, config.repository.path);
         if (result.length != 0) {
@@ -43,14 +44,15 @@ export default class VerificationController extends BaseController implements IC
             
             const filesArr: fileUpload.UploadedFile[] = [].concat(req.files!.files); // ensure an array, regardless of how many files received
             const wrappedFiles = filesArr.map(f => ({ buffer: f.data }));
-            const validatedFiles = this.validationService.checkFiles(wrappedFiles);
-            const errors = validatedFiles
-                            .filter(file => !file.isValid())
-                            .map(file => file.info);
+            const validatedContracts = this.validationService.checkFiles(wrappedFiles);
+            const errors = validatedContracts
+                            .filter(contract => Object.keys(contract.invalid).length)
+                            .map(contract => `${contract.name} ${Object(contract.invalid).keys()}`);
+
             if (errors.length) {
-                return next(new NotFoundError(errors.join("\n"), false));
+                return next(new NotFoundError("Errors in:\n" + errors.join("\n"), false));
             }
-            inputData.files = validatedFiles;
+            inputData.contracts = validatedContracts;
             const matches: any = [];
             matches.push(await this.verificationService.inject(inputData, config.localchain.url));
             Promise.all(matches).then((result) => {

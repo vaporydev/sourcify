@@ -1,4 +1,5 @@
 import Web3 from "web3";
+import { CheckedContract } from "./CheckedContract";
 
 export interface FileObject {
     name: string,
@@ -9,8 +10,9 @@ export interface FileObject {
 export interface InputData {
     chain: string,
     addresses: string[],
-    files?: any,
-    bytecode?: string
+    contracts?: CheckedContract[],
+    bytecode?: string;
+    shouldFetch?: boolean;
 }
 
 export declare interface StringMap {

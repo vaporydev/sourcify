@@ -650,7 +650,7 @@ export default class Monitor {
         if (errors.length) {
           throw new Error(errors.join("\n"));
         }
-        data.files = validatedFiles;
+        data.contracts = validatedFiles;
 
         await this.injector.inject(data);
 
