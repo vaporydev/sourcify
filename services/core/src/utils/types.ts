@@ -22,6 +22,8 @@ export interface Match {
   status: 'perfect' | 'partial' | null
 }
 
+export type MatchLevel = "full_match" | "any";
+
 export interface MonitorConfig {
   ipfsCatRequest? : string,
   ipfsProvider? : any,

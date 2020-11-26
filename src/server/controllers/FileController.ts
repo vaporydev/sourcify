@@ -2,7 +2,7 @@ import { NextFunction, Request, Response, Router } from 'express';
 import BaseController from './BaseController';
 import { IController } from '../../common/interfaces';
 import * as HttpStatus from 'http-status-codes';
-import { Logger, IFileService } from '@ethereum-sourcify/core';
+import { Logger, IFileService, MatchLevel } from '@ethereum-sourcify/core';
 import { param, validationResult } from 'express-validator';
 import { isValidAddress, isValidChain } from '../../common/validators/validators';
 import { NotFoundError, ValidationError } from '../../common/errors'
@@ -20,59 +20,42 @@ export default class FileController extends BaseController implements IControlle
         this.logger = Logger("FileController");
     }
 
-    getTreeByChainAndAddress = async (req: Request, res: Response, next: NextFunction) => {
-        const validationErrors = validationResult(req);
-        if (!validationErrors.isEmpty()) {
-            return next(new ValidationError(validationErrors.array()))
+    createEndpoint(retrieveMethod: (chain: string, address: string, match: MatchLevel) => Promise<any[]>, match: MatchLevel, successMessage: string) {
+        return async (req: Request, res: Response, next: NextFunction) => {
+            const validationErrors = validationResult(req);
+            if (!validationErrors.isEmpty()) {
+                return next(new ValidationError(validationErrors.array()));
+            }
+            let retrieved: any[];
+            try {
+                retrieved = await retrieveMethod(req.params.chain, req.params.address, match);
+                if (retrieved.length === 0) return next(new NotFoundError("Files have not been found!"));
+    
+            } catch (err) {
+                return next(new NotFoundError(err.message));
+            }
+            this.logger.info({
+                chainId: req.params.chain,
+                address: req.params.address
+            },
+                successMessage);
+            return res.status(HttpStatus.OK).json(retrieved);
         }
-        let tree;
-        try {
-            tree = await this.fileService.getTreeByChainAndAddress(req.params.chain, req.params.address);
-            if (!tree.length) return next(new NotFoundError("Files have not been found!"));
-        } catch (err) {
-            next(new NotFoundError(err.message));
-            return;
-        }
-        this.logger.info({
-            chainId: req.params.chain,
-            address: req.params.address
-        },
-            "getTreeByChainAndAddress success");
-        return res.status(HttpStatus.OK).json(tree)
-    }
-
-    getByChainAndAddress = async (req: Request, res: Response, next: NextFunction) => {
-        const validationErrors = validationResult(req);
-        if (!validationErrors.isEmpty()) {
-            return next(new ValidationError(validationErrors.array()))
-        }
-        let files;
-        try {
-            files = await this.fileService.getByChainAndAddress(req.params.chain, req.params.address);
-            if (files.length === 0) return next(new NotFoundError("Files have not been found!"));
-
-        } catch (err) {
-            return next(new NotFoundError(err.message));
-        }
-        this.logger.info({
-            chainId: req.params.chain,
-            address: req.params.address
-        },
-            "getByChainAndAddress success");
-        return res.status(HttpStatus.OK).json(files);
     }
 
     registerRoutes = (): Router => {
-        this.router.route('/tree/:chain/:address')
-            .get([
-                param('chain').custom(chain => isValidChain(chain)),
-                param('address').custom(address => isValidAddress(address))
-            ], this.safeHandler(this.getTreeByChainAndAddress));
-        this.router.route('/:chain/:address')
-            .get([
-                param('chain').custom(chain => isValidChain(chain)),
-                param('address').custom(address => isValidAddress(address))
-            ], this.safeHandler(this.getByChainAndAddress));
+        [
+            { prefix: "/tree/any", method: this.createEndpoint(this.fileService.getTree, "any", "getTree any match success") },
+            { prefix: "/any", method: this.createEndpoint(this.fileService.getContents, "any", "getContents any match success") },
+            { prefix: "/tree", method: this.createEndpoint(this.fileService.getTree, "full_match", "getTree full_match success") },
+            { prefix: "", method: this.createEndpoint(this.fileService.getContents, "full_match", "getContents full_match success") }
+
+        ].forEach(pair => this.router.route(pair.prefix + "/:chain/:address").get([
+            param("chain").custom(isValidChain),
+            param("address").custom(isValidAddress)
+        ], 
+            this.safeHandler(pair.method)
+        ));
         return this.router;
     }
 }
