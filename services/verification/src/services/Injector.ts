@@ -217,6 +217,7 @@ export class Injector {
             });
 
             if (shouldFetch && !contract.isValid()) {
+                // eslint-disable-next-line no-useless-catch
                 try {
                     await contract.fetchMissing(this.log);
                 } catch(err) {
