@@ -12,7 +12,6 @@ export interface InputData {
     addresses: string[],
     contracts?: CheckedContract[],
     bytecode?: string;
-    shouldFetch?: boolean;
 }
 
 export declare interface StringMap {

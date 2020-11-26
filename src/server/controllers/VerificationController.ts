@@ -33,8 +33,7 @@ export default class VerificationController extends BaseController implements IC
 
         const inputData: InputData = {
             addresses: [req.body.address],
-            chain,
-            shouldFetch: req.body.shouldFetch || true // TODO add a shouldFetch checkbox or similar to ui
+            chain: chain
         }
         const result = await this.verificationService.findByAddress(req.body.address, inputData.chain, config.repository.path);
         if (result.length != 0) {

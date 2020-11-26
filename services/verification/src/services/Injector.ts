@@ -197,7 +197,7 @@ export class Injector {
     public async inject(
         inputData: InputData
     ): Promise<Match> {
-        const { chain, addresses, contracts, shouldFetch } = inputData;
+        const { chain, addresses, contracts } = inputData;
         this.validateAddresses(addresses);
         this.validateChain(chain);
 
@@ -216,7 +216,7 @@ export class Injector {
                 object: "settings.compilationTarget"
             });
 
-            if (shouldFetch && !contract.isValid()) {
+            if (!contract.isValid()) {
                 // eslint-disable-next-line no-useless-catch
                 try {
                     await contract.fetchMissing(this.log);
